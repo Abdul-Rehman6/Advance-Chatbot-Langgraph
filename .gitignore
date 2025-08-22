@@ -1,0 +1,42 @@
+# Ignore the virtual environment folder
+myenv/
+myenv/Scripts/
+myenv/Include/
+myenv/Lib/
+
+# Ignore other project folders (e.g., Agentic RAG)
+Agentic RAG/
+3-Usecase-ChatBot/
+LangGraph Projects/
+MCP Project/
+# Add other folder names here if applicable (e.g., AgenticOtherProject/)
+
+# Ignore Python compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore environment variable files
+.env
+
+# Ignore OS generated files
+.DS_Store
+Thumbs.db
+
+# Ignore build artifacts and logs
+*.log
+build/
+dist/
+
+# Ignore IDE/project-specific files
+.vscode/
+*.code-workspace
+
+# Ignore any large datasets or temporary files
+*.csv
+*.json
+temp/
