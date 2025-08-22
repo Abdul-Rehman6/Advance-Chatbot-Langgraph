@@ -1,17 +1,24 @@
 from typing import TypedDict, Annotated, Optional
 import sqlite3
-
 from dotenv import load_dotenv
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
+from langchain_tavily import TavilySearch
+from langgraph.prebuilt import ToolNode, tools_condition
+
 
 load_dotenv()
 
-# ---- LLM ----
+tavily_search_tool = TavilySearch(max_results = 3)
+tools = [tavily_search_tool]
+tool_node = ToolNode(tools = tools)
+
+# ---- LLM_with_tools ----
 llm = ChatOpenAI(model="gpt-4o-mini")
+llm_with_tools = llm.bind_tools(tools = tools)
 
 # ---- State ----
 class ChatState(TypedDict):
@@ -21,7 +28,7 @@ class ChatState(TypedDict):
 # ---- Node ----
 def chat_node(state: ChatState):
     messages = state["messages"]
-    response = llm.invoke(messages)
+    response = llm_with_tools.invoke(messages)
     return {"messages": [response]}
 
 # ---- SQLite + Checkpointer ----
@@ -45,8 +52,13 @@ checkpointer = SqliteSaver(conn=conn)
 # ---- Graph ----
 graph = StateGraph(ChatState)
 graph.add_node("chat_node", chat_node)
+graph.add_node("tools", tool_node)
+
 graph.add_edge(START, "chat_node")
-graph.add_edge("chat_node", END)
+graph.add_conditional_edges("chat_node", tools_condition, {"tools": "tools",
+                                                           END: END})
+graph.add_edge("tools", "chat_node")
+
 chatbot = graph.compile(checkpointer=checkpointer)
 
 # ---- Threads API ----

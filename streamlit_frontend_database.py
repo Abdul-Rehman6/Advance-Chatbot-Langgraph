@@ -1,7 +1,7 @@
 import re
 import uuid
 import streamlit as st
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 
 from langgraph_database_backend import (
     chatbot,
@@ -38,7 +38,7 @@ def load_conversation(thread_id: str):
         return []
     return state.values.get("messages", [])
 
-# --------- Title generation (ChatGPT-like, one-time) ---------
+# --------- Title generation ---------
 
 def _to_title_case(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip().title()
@@ -58,7 +58,7 @@ def _heuristic_title(messages) -> str:
 def generate_summary(messages) -> str:
     """
     Generate a concise, ChatGPT-style title once per thread.
-    - 3–8 words
+    - 3-8 words
     - Title Case
     - No quotes/emojis
     """
@@ -167,16 +167,24 @@ if user_input:
     # 2) stream assistant via LangGraph with persisted thread_id
     CONFIG = {"configurable": {"thread_id": st.session_state["thread_id"]}}
     with st.chat_message("assistant"):
-        ai_message = st.write_stream(
-            message_chunk.content
+        def stream_generator():
             for message_chunk, metadata in chatbot.stream(
                 {"messages": [HumanMessage(content=user_input)]},
                 config=CONFIG,
                 stream_mode="messages",
-            )
-        )
+            ):
+                msg = message_chunk
+                if isinstance(msg, AIMessage):
+                    yield msg.content  # stream AI response
+                elif isinstance(msg, ToolMessage):
+                    yield f"\n\n🔧 Tool `{msg.name}` returned:\n\n{msg.content}"
 
-    st.session_state["message_history"].append({"role": "assistant", "content": ai_message})
+        ai_message = st.write_stream(stream_generator())
+
+    # save assistant reply in history
+    st.session_state["message_history"].append(
+        {"role": "assistant", "content": ai_message}
+    )
 
     # 3) One-time: generate & persist title if not present
     tid = str(st.session_state["thread_id"])
