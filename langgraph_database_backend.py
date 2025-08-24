@@ -8,12 +8,52 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langchain_tavily import TavilySearch
 from langgraph.prebuilt import ToolNode, tools_condition
+from langchain_core.tools import tool
+import requests
 
 
 load_dotenv()
 
 tavily_search_tool = TavilySearch(max_results = 3)
-tools = [tavily_search_tool]
+
+
+@tool
+def calculator(first_num: float, second_num: float, operation: str) -> dict:
+    """
+    Perform a basic arithmetic operation on two numbers.
+    Supported operations: add, sub, mul, div
+    """
+    try:
+        if operation == "add":
+            result = first_num + second_num
+        elif operation == "sub":
+            result = first_num - second_num
+        elif operation == "mul":
+            result = first_num * second_num
+        elif operation == "div":
+            if second_num == 0:
+                return {"error": "Division by zero is not allowed"}
+            result = first_num / second_num
+        else:
+            return {"error": f"Unsupported operation '{operation}'"}
+        
+        return {"first_num": first_num, "second_num": second_num, "operation": operation, "result": result}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@tool
+def get_stock_price(symbol: str) -> dict:
+    """
+    Fetch latest stock price for a given symbol (e.g. 'AAPL', 'TSLA') 
+    using Alpha Vantage with API key in the URL.
+    """
+    url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey=O3L9KK4VI15ETBMW"
+    r = requests.get(url)
+    return r.json()
+
+
+tools = [tavily_search_tool, calculator, get_stock_price]
 tool_node = ToolNode(tools = tools)
 
 # ---- LLM_with_tools ----
