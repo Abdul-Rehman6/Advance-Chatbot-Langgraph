@@ -123,7 +123,7 @@ if "thread_summaries" not in st.session_state:
         tid = str(thread_id)
         st.session_state["thread_summaries"][tid] = db_summaries.get(tid, "New Conversation")
 
-# Ensure current thread is tracked
+# current thread is tracked
 add_thread(st.session_state["thread_id"])
 
 # ============================ Sidebar ============================
@@ -135,7 +135,7 @@ if st.sidebar.button("New Chat"):
 
 st.sidebar.header("My Conversations")
 
-# Show most recent first
+# Showing most recent first
 for thread_id in st.session_state["chat_threads"][::-1]:
     tid = str(thread_id)
     summary = st.session_state["thread_summaries"].get(tid, "New Conversation")
